@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Capsule 2050 — flip cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f5eedd; --ink:#1b2631; --muted:#5b6978; --card:#fffdf6; --line:#d8cbb0;
+  --accent:#d1561f; --teal:#0f6e66; --gold:#e9b44c;
+  --c0:#b42318; --c1:#d1561f; --c2:#e39b2f; --c3:#c3b73d; --c4:#86b459; --c5:#3c9863; --c6:#0f6e66;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:clamp(12px,min(1.25vw,2.2vh),26px)}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden;
+  background-image:radial-gradient(circle at 15% 10%,rgba(233,180,76,.18),transparent 40%),radial-gradient(circle at 90% 90%,rgba(15,110,102,.12),transparent 45%)}
+h1,h2,.display{font-family:Fraunces,Georgia,serif;font-weight:800;letter-spacing:-.01em}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:.6rem;padding:.8rem 1.6rem .7rem}
+
+/* header */
+.top{display:flex;align-items:center;gap:1.2rem;min-height:2.4rem}
+.brand{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:1.15rem;letter-spacing:.02em;white-space:nowrap}
+.brand span{color:var(--accent)}
+.dots{flex:1;display:flex;gap:.35rem;justify-content:center;flex-wrap:wrap}
+.dot{width:.75rem;height:.75rem;border-radius:50%;background:var(--line);border:0;cursor:pointer;padding:0}
+.dot.on{background:var(--accent);transform:scale(1.35)}
+.dot.done{background:var(--teal)}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:1.6rem;min-width:6.2rem;text-align:center;padding:.15rem .8rem;border-radius:999px;background:var(--card);border:2px solid var(--line);cursor:pointer;user-select:none}
+.timer.run{border-color:var(--teal);color:var(--teal)}
+.timer.low{border-color:var(--c0);color:var(--c0);animation:pulse 1s infinite}
+.timer.done{background:var(--c0);color:#fff;border-color:var(--c0)}
+.timer[hidden]{display:none}
+@keyframes pulse{50%{transform:scale(1.06)}}
+
+/* stage */
+.stage{position:relative;min-height:0;perspective:2200px}
+.view{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:1rem}
+.center{align-items:center;text-align:center}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:1.2rem;box-shadow:0 .5rem 1.6rem rgba(27,38,49,.08)}
+
+/* title */
+.title h1{font-size:5.4rem;line-height:1}
+.title h1 em{font-style:normal;color:var(--accent)}
+.title .sub{font-size:1.9rem;color:var(--muted);max-width:44ch}
+.title .keys{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:center;margin-top:1.2rem}
+.kbd{font-weight:600;font-size:.95rem;padding:.25rem .7rem;border:2px solid var(--line);border-radius:.6rem;background:var(--card);color:var(--muted)}
+
+/* generic headings */
+.h2{font-size:2.6rem;line-height:1.1}
+.lead{font-size:1.5rem;color:var(--muted)}
+
+/* scale */
+.scale{display:grid;grid-template-columns:repeat(7,1fr);gap:.7rem}
+.sc{background:var(--c);color:#fff;border-radius:.9rem;padding:.8rem .3rem;text-align:center;display:flex;flex-direction:column;gap:.2rem;transition:opacity .35s,transform .35s,box-shadow .35s}
+.sc b{font-family:Fraunces,Georgia,serif;font-size:2.6rem;line-height:1}
+.sc span{font-size:1rem;font-weight:600;line-height:1.15}
+.sc.s3{color:#2a2a10}
+.s0{--c:var(--c0)}.s1{--c:var(--c1)}.s2{--c:var(--c2)}.s3{--c:var(--c3)}.s4{--c:var(--c4)}.s5{--c:var(--c5)}.s6{--c:var(--c6)}
+.big .sc b{font-size:4.6rem}.big .sc span{font-size:1.5rem}.big .sc{padding:1.6rem .3rem}
+.show-answer .sc:not(.inzone){opacity:.28}
+.show-answer .sc.inzone{transform:translateY(-.35rem) scale(1.04);box-shadow:0 0 0 .22rem var(--ink)}
+
+/* chunks */
+.chunks{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem 1.2rem}
+.chunk-item{display:flex;gap:.9rem;align-items:center;padding:.9rem 1.1rem}
+.chunk-item .n{flex:none;width:2.4rem;height:2.4rem;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:grid;place-items:center;font-size:1.25rem}
+.chunk-item .t{font-size:1.55rem;font-weight:600;line-height:1.2}
+.chunk-item .g{font-size:.95rem;color:var(--muted);font-weight:500}
+.gap{color:var(--accent);font-weight:800}
+
+/* steps */
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:.7rem 1.4rem;counter-reset:s}
+.steps.one{grid-template-columns:1fr}
+.step{display:flex;gap:.9rem;align-items:flex-start;padding:.8rem 1.1rem;font-size:1.4rem;line-height:1.3;font-weight:500}
+.step .n{flex:none;width:2.2rem;height:2.2rem;border-radius:50%;background:var(--teal);color:#fff;font-weight:700;display:grid;place-items:center;font-size:1.15rem;margin-top:.1rem}
+.step .time{margin-left:auto;flex:none;color:var(--muted);font-size:1rem;font-weight:600;padding-top:.2rem}
+.step b{font-weight:700}
+.dense{gap:.6rem}
+.dense .h2{font-size:2.2rem}
+.dense .step{font-size:1.2rem;padding:.5rem 1rem}
+.dense .steps{gap:.5rem}
+.row2{display:grid;grid-template-columns:1.25fr 1fr;gap:1.4rem;align-items:start}
+.bubble{padding:1rem 1.3rem;font-size:1.35rem;line-height:1.4;background:#fff7e1;border-color:var(--gold)}
+.bubble small{display:block;font-size:.95rem;color:var(--muted);font-weight:600;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em}
+.mini{display:grid;gap:.4rem}
+.mini div{padding:.45rem .8rem;font-size:1.1rem;font-weight:600}
+
+/* cards */
+.flip{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.7,.2,1)}
+.flip.is-flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:1.4rem;padding:1.4rem 2rem;display:flex;flex-direction:column;gap:.8rem}
+.front{background:var(--ink);color:#fff8e8;justify-content:center;align-items:center;text-align:center;border:.35rem solid var(--gold)}
+.back{transform:rotateY(180deg);background:var(--card);border:2px solid var(--line);box-shadow:0 .5rem 1.6rem rgba(27,38,49,.1)}
+.meta{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.front .meta{position:absolute;top:1.3rem;left:1.8rem}
+.chip{font-weight:700;font-size:.95rem;padding:.25rem .8rem;border-radius:999px;background:var(--ink);color:#fff;letter-spacing:.04em}
+.front .chip{background:var(--gold);color:var(--ink)}
+.chip.theme{background:var(--accent);color:#fff}
+.chip.ghost{background:transparent;color:var(--muted);border:2px solid var(--line);font-weight:600;letter-spacing:0}
+.chunk{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:4.2rem;line-height:1.12;max-width:20ch}
+.front .gap{color:var(--gold)}
+.gram{font-size:1.5rem;color:#e7d9b5;font-weight:500}
+.cue{position:absolute;bottom:1.3rem;font-size:1.1rem;color:#cdbf9a}
+.statement{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:2.15rem;line-height:1.22}
+.q{display:flex;align-items:baseline;gap:.8rem;font-weight:700;font-size:1.2rem}
+.q small{font-weight:500;color:var(--muted);font-size:1rem}
+.cols{display:grid;grid-template-columns:1.1fr 1fr;gap:1rem}
+.cols h4{font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:.35rem}
+.cols li{list-style:none;font-size:1.2rem;line-height:1.28;padding:.28rem .7rem;margin-bottom:.28rem;border-left:.28rem solid var(--gold);background:#fbf3de;border-radius:0 .5rem .5rem 0;font-weight:500}
+.answer{margin-top:auto;display:flex;gap:1rem;align-items:center;padding:.7rem 1.1rem;border-radius:.9rem;background:var(--ink);color:#fff8e8;opacity:0;transform:translateY(.6rem);transition:opacity .4s .15s,transform .4s .15s;min-height:4.6rem}
+.show-answer .answer{opacity:1;transform:none}
+.verdict{flex:none;font-weight:800;font-size:1.35rem;color:var(--gold);line-height:1.1;max-width:9ch}
+.verdict small{display:block;font-size:.85rem;color:#e7d9b5;font-weight:600;margin-top:.15rem}
+.answer p{font-size:1.3rem;line-height:1.3;font-weight:500}
+
+/* footer */
+.foot{display:flex;align-items:center;gap:.8rem;min-height:2.3rem}
+.teams{display:flex;gap:.5rem}
+.team{display:flex;align-items:center;gap:.5rem;padding:.2rem .3rem .2rem .8rem;border-radius:999px;background:var(--card);border:2px solid var(--line);font-weight:700;font-size:1.05rem;cursor:pointer;user-select:none}
+.team b{font-size:1.25rem;min-width:1.7rem;text-align:center;background:var(--ink);color:#fff;border-radius:999px;padding:0 .4rem}
+.hint{flex:1;text-align:center;font-size:.9rem;color:var(--muted)}
+.nav{display:flex;gap:.4rem}
+.nav button{font:inherit;font-weight:700;font-size:1.2rem;width:2.8rem;height:2.4rem;border-radius:.7rem;border:2px solid var(--line);background:var(--card);cursor:pointer;color:var(--ink)}
+.nav button:hover{border-color:var(--ink)}
+.notes{position:fixed;left:1.6rem;right:1.6rem;bottom:3.6rem;background:var(--ink);color:#fff8e8;border-radius:1rem;padding:1rem 1.4rem;font-size:1.25rem;line-height:1.4;box-shadow:0 .6rem 2rem rgba(0,0,0,.35);z-index:5}
+.notes[hidden]{display:none}
+.notes small{display:block;color:var(--gold);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.8rem;margin-bottom:.3rem}
+.end .days{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:9rem;line-height:1;color:var(--accent)}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.flip{transition:none}.timer.low{animation:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">TIME CAPSULE <span>2050</span></div>
+    <div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
+    <div class="timer" id="timer" title="T = start / pause, R = reset" hidden>2:00</div>
+  </header>
+  <main class="stage" id="stage"></main>
+  <footer class="foot">
+    <div class="teams" id="teams" title="Click = +1, right-click = −1 (or keys 1–4, Shift+1–4)"></div>
+    <div class="hint">Space / → next &nbsp;·&nbsp; ← back &nbsp;·&nbsp; T timer &nbsp;·&nbsp; R reset &nbsp;·&nbsp; N notes &nbsp;·&nbsp; S spare cards &nbsp;·&nbsp; F full screen &nbsp;·&nbsp; 1–4 score</div>
+    <div class="nav"><button id="prev" aria-label="Back">◀</button><button id="next" aria-label="Next">▶</button></div>
+  </footer>
+</div>
+<aside class="notes" id="notes" hidden></aside>
+<div class="visually-hidden" id="live" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- content ---------- */
+var OPEN_DATE = new Date(2030, 10, 8); // capsule opening date (edit here)
+
+var SCALE = [["0","no chance"],["1","highly unlikely"],["2","unlikely"],["3","fifty-fifty"],["4","likely"],["5","highly likely"],["6","certain"]];
+
+var REACT = ["I see your point, but …","What makes you think so?","I couldn’t agree more.","I’m not so sure about that."];
+
+var BANK = [
+  ["It’s highly unlikely that …","intensifier"],
+  ["There’s a strong possibility of …","noun + preposition"],
+  ["By 2050, … will have + V3","future perfect"],
+  ["This time in 2050, … will be + V-ing","future continuous"],
+  ["There’ll be a growing demand for …","noun + preposition"],
+  ["Our dependence on … will …","noun + preposition"],
+  ["I’m absolutely convinced that …","intensifier"],
+  ["There’s no chance of …","noun + preposition"]
+];
+
+var CARDS = [
+ {id:"r1", tag:"Round 1 / 6", theme:"WORK", src:"1930 · John Maynard Keynes",
+  chunk:"This time in 2030, … will be + V-ing", gram:"future continuous",
+  text:"In 1930, the economist John Maynard Keynes predicted that people in rich countries would be working only about 15 hours a week by 2030.",
+  q:"How likely is it that this came true?",
+  start:["In my country, most full-time workers …","New technology has made work … but …","People don’t want to work less because …"],
+  verdict:"NOT YET", zone:[0,1],
+  answer:"We did get richer, as Keynes expected. But full-time workers still work far more than 15 hours a week, and 2030 is only four years away.",
+  notes:"Слушайте, как команда строит фразу с This time in 2030, … will be working. Ответ: Кейнс (1930) оказался прав про рост благосостояния, но не про 15-часовую неделю. До 2030 осталось четыре года, поэтому «пока не сбылось». Зона 0–1."},
+ {id:"r2", tag:"Round 2 / 6", theme:"TRANSPORT", src:"1900 · Ladies’ Home Journal",
+  chunk:"I’m absolutely convinced that …", gram:"intensifier + that-clause",
+  text:"In 1900, a magazine predicted that by the year 2000 express trains would travel at 150 miles an hour.",
+  q:"How likely is it that this came true?",
+  start:["High-speed trains already …","In 1900 nobody could imagine …","I’ve travelled by train at …"],
+  verdict:"TRUE", zone:[5,6],
+  answer:"Amtrak’s fastest trains reach 150 mph, and high-speed trains in other countries go even faster.",
+  notes:"Ответ: сбылось. Самые быстрые поезда Amtrak ходят до 150 mph, в других странах быстрее (Mental Floss, Saturday Evening Post). Зона 5–6. Следите за интенсификатором: absolutely convinced."},
+ {id:"r3", tag:"Round 3 / 6", theme:"HOME", src:"1900 · John Elfreth Watkins Jr.",
+  chunk:"There’ll be a growing demand for …", gram:"noun + preposition",
+  text:"In 1900, an engineer predicted that people would buy ready-cooked meals from shops, like bread from bakeries.",
+  q:"How likely is it that this came true?",
+  start:["Nowadays you can order …","Delivery apps …","In my city …"],
+  verdict:"TRUE", zone:[6,6],
+  answer:"Ready meals are in every supermarket, and delivery apps bring restaurant food to your door.",
+  notes:"Ответ: сбылось, зона 6. Забавная деталь: Watkins ждал, что посуду будут возвращать на мойку, это не прижилось. Чанк: demand for + существительное или -ing."},
+ {id:"r4", tag:"Round 4 / 6", theme:"LANGUAGE", src:"1900 · Ladies’ Home Journal",
+  chunk:"It’s highly unlikely that …", gram:"intensifier",
+  text:"In 1900, a magazine predicted that by 2000 there would be no letters C, X or Q in the English alphabet.",
+  q:"How likely is it that this came true?",
+  start:["In English, spelling …","Without C, X and Q, words like …","People would never give up …"],
+  verdict:"FALSE", zone:[0,0],
+  answer:"All 26 letters are still here. Imagine spelling by sound: cat → kat, box → boks, queen → kween.",
+  notes:"Ответ: не сбылось, зона 0. Покажите на доске cat → kat, box → boks, queen → kween. Заодно проверьте разницу: highly unlikely это 1, no chance это 0."},
+ {id:"r5", tag:"Round 5 / 6", theme:"HEALTH", src:"1900 · Ladies’ Home Journal",
+  chunk:"By 2000, … will have + V3", gram:"future perfect",
+  text:"In 1900, a writer predicted that by 2000 the average American would live to 50 instead of 35.",
+  q:"How likely is it that this came true?",
+  start:["In 1900 many people died of …","Medicine has changed …","These days people live …"],
+  verdict:"TRUE, AND MORE", zone:[5,6],
+  answer:"Life expectancy in the US was about 48 in 1900. By 2000 it was 77, far more than the prediction.",
+  notes:"Ответ: сбылось с запасом. По Saturday Evening Post, ожидаемая продолжительность жизни в США: 47,8 в 1900 и 77 в 2000. Чанк: By 2000, life expectancy will have risen to … Зона 5–6."},
+ {id:"r6", tag:"Round 6 / 6", theme:"ROBOTS", src:"1964 · Isaac Asimov, The New York Times",
+  chunk:"Our dependence on … will …", gram:"noun + preposition",
+  text:"In 1964, the writer Isaac Asimov predicted that in 2014 robots would exist, but they would be neither common nor very good.",
+  q:"How likely is it that this came true?",
+  start:["Robot vacuum cleaners …","In 2014 I didn’t have …","Factories use robots, but at home …"],
+  verdict:"MOSTLY TRUE", zone:[4,5],
+  answer:"In 2014 robots existed, but they were not common in homes. Will that still be true in 2050?",
+  notes:"Ответ: в целом верно для 2014 (Asimov, NYT, 1964). Зона 4–5. Подводка к игре: our dependence on AI and robots by 2050."},
+ {id:"s1", spare:true, tag:"Spare", theme:"FASHION", src:"1989 · Back to the Future Part II",
+  chunk:"There’s no chance of …", gram:"noun + preposition",
+  text:"In 1989, the film Back to the Future Part II showed self-lacing shoes in the year 2015. Could this come true?",
+  q:"How likely is it that this came true?",
+  start:["Shoes that lace themselves …","Engineers can …","The film makers …"],
+  verdict:"TRUE, ONE YEAR LATE", zone:[5,6],
+  answer:"Nike made working self-lacing Nike Mag shoes in 2016: only 89 pairs, sold at auction for charity.",
+  notes:"Запасная карточка. Nike Mag 2016: 89 пар, аукцион в пользу фонда Майкла Дж. Фокса (Sotheby’s). Зона 5–6, сбылось с опозданием на год."},
+ {id:"s2", spare:true, tag:"Spare", theme:"TRANSPORT", src:"2026 · aviation news",
+  chunk:"There’s a strong possibility of …", gram:"noun + preposition",
+  text:"Some companies say that flying taxis will carry passengers over big cities before 2030.",
+  q:"How likely is it that this will happen by 2030?",
+  start:["Flying taxis would need …","In big cities, traffic …","Safety approval …"],
+  verdict:"OPEN QUESTION", zone:null,
+  answer:"In 2026 the first commercial flights are only starting, and most countries are still waiting for safety approval. What do you think?",
+  notes:"Запасная, открытый вопрос без верного ответа. Перед уроком проверьте новости: статус быстро меняется. Оценки можно положить в капсулу."}
+];
+
+function stepsHTML(list, cls){
+  return '<div class="steps '+(cls||"")+'">'+list.map(function(s,i){
+    return '<div class="step panel"><span class="n">'+(i+1)+'</span><span>'+s[0]+'</span>'+(s[1]?'<span class="time">'+s[1]+'</span>':'')+'</div>';
+  }).join("")+'</div>';
+}
+function gapify(t){ return t.replace(/…/g,'<span class="gap">…</span>'); }
+function scaleHTML(zone, big){
+  return '<div class="scale'+(big?' big':'')+'">'+SCALE.map(function(s,i){
+    var inz = zone && i>=zone[0] && i<=zone[1];
+    return '<div class="sc s'+i+(inz?' inzone':'')+'"><b>'+s[0]+'</b><span>'+s[1]+'</span></div>';
+  }).join("")+'</div>';
+}
+
+var VIEWS = [
+ {id:"title", type:"html", timer:0,
+  notes:"Раздайте листы Rating sheet до начала. Скажите: сегодня вы судьи прогнозов из прошлого, потом сами предскажете 2050 год. Пробел или стрелка вправо листает.",
+  html:function(){ return '<div class="view center title"><h1>Time Capsule <em>2050</em></h1><p class="sub">Judge predictions from the past. Fold a fortune teller. Predict the future.</p><div class="keys"><span class="kbd">Space / → next</span><span class="kbd">T timer</span><span class="kbd">N teacher notes</span><span class="kbd">F full screen</span></div></div>'; }},
+ {id:"scale", type:"html", timer:0,
+  notes:"Прочитайте шкалу хором. Вопрос на всех карточках: How likely is it that this came true? Студенты молча обводят цифру на листе в колонке My rating.",
+  html:function(){ return '<div class="view"><h2 class="h2">How likely is it that this came true?</h2>'+scaleHTML(null,true)+'<p class="lead">Circle <b>your own</b> rating on the sheet. Then talk to your team.</p></div>'; }},
+ {id:"chunks", type:"html", timer:0,
+  notes:"Восемь чанков. Проверьте произношение: highly unlikely, dependence on. Пусть подчеркнут три, которые хотят использовать. Эти же чанки лягут под клапаны гадалки.",
+  html:function(){ return '<div class="view"><h2 class="h2">8 chunks for predictions</h2><div class="chunks">'+BANK.map(function(b,i){
+      return '<div class="chunk-item panel"><span class="n">'+(i+1)+'</span><div><div class="t">'+gapify(b[0])+'</div><div class="g">'+b[1]+'</div></div></div>';
+    }).join("")+'</div><p class="lead">Underline three you want to use today.</p></div>'; }},
+ {id:"how", type:"html", timer:0,
+  notes:"Объясните один раз. Лидер меняется по кругу. Очко команде: её оценка в зоне ответа или отличается не более чем на 1; ещё очко лидеру за верно использованный чанк. Счёт: клавиши 1–4.",
+  html:function(){ return '<div class="view"><h2 class="h2">One round = 2 minutes</h2><div class="row2"><div>'+stepsHTML([
+      ["<b>Read</b> the chunk on the front of the card","10 s"],
+      ["<b>Flip.</b> Circle <b>My rating</b> on your sheet, in silence","20 s"],
+      ["<b>Talk</b> in English. Agree on <b>Our team rating</b>","50 s"],
+      ["<b>Leader speaks:</b> “We think it’s … that …, so we rate it …”","20 s"],
+      ["<b>Answer.</b> Write the real zone on your sheet","20 s"]
+    ],"one")+'</div><div class="mini panel" style="padding:1rem"><div style="color:var(--teal);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase">Use in your team talk</div>'+REACT.map(function(r){return '<div class="panel">'+r+'</div>';}).join("")+'</div></div></div>'; }}
+];
+CARDS.forEach(function(c){ VIEWS.push({id:c.id, type:"card", card:c, spare:!!c.spare, timer:120, notes:c.notes}); });
+VIEWS = VIEWS.concat([
+ {id:"fold", type:"html", timer:360,
+  notes:"6 минут. Покажите готовый образец. Если не получается, пары помогают друг другу. Пока не пишем: сначала складываем целиком.",
+  html:function(){ return '<div class="view"><h2 class="h2">Fold your fortune teller</h2>'+stepsHTML([
+      ["Make a square: fold one corner to the opposite long edge, cut off the extra strip, unfold."],
+      ["Fold the square in half along both diagonals and unfold. You see an X."],
+      ["Fold all four corners into the centre."],
+      ["Turn the paper over."],
+      ["Fold all four corners into the centre again."],
+      ["Fold in half one way, open, then fold in half the other way, open."],
+      ["Slide your thumbs and index fingers under the four flaps. Push the points together."]
+    ])+'</div>'; }},
+ {id:"write", type:"html", timer:360,
+  notes:"6 минут. Снаружи 4 панели с темами, внутри 8 треугольников с числами, под ними чанки. Печатными буквами, чтобы партнёр мог прочитать.",
+  html:function(){ return '<div class="view"><h2 class="h2">Write on it</h2><div class="row2"><div>'+stepsHTML([
+      ["<b>Outside</b>, four panels: <b>WORK · TRANSPORT · HOME · HEALTH</b>"],
+      ["<b>Inside</b>, eight triangles: numbers <b>1–8</b>"],
+      ["<b>Under each triangle</b>: lift the flap and copy the chunk with the same number. Use capital letters."]
+    ],"one")+'</div><div class="mini panel" style="padding:1rem"><div style="color:var(--teal);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase">Chunks 1–8</div>'+BANK.map(function(b,i){return '<div class="panel">'+(i+1)+'. '+gapify(b[0])+'</div>';}).join("")+'</div></div></div>'; }},
+ {id:"play", type:"html", timer:480,
+  notes:"8 минут. Ходите по классу и записывайте три фразы для разбора: одну удачную и две с ошибкой в чанке. В конце пара выбирает лучший прогноз и записывает на полоске, чанк подчёркивает.",
+  html:function(){ return '<div class="view dense"><h2 class="h2">Play in pairs</h2><div class="row2"><div>'+stepsHTML([
+      ["<b>B</b> chooses a theme. <b>A</b> opens and closes the fortune teller, letter by letter."],
+      ["B says a number from 1 to 8. A opens and closes that many times."],
+      ["B says another number. A lifts the flap and reads the <b>chunk</b>."],
+      ["B finishes the sentence with a prediction for <b>2050</b>."],
+      ["A reacts and gives a <b>rating 0–6</b>. B defends the prediction in one sentence."],
+      ["Swap roles. Best prediction goes on a paper strip. <b>Underline the chunk.</b>"]
+    ],"one")+'</div><div><div class="bubble panel"><small>Example</small>WORK + chunk 5<br><b>B:</b> “There’ll be a growing demand for robot repair technicians.”<br><b>A:</b> “I see your point, but I’d say it’s highly likely, a 5.”<br><b>B:</b> “Robots are everywhere, so someone must fix them.”</div></div></div></div>'; }},
+ {id:"court", type:"html", timer:75,
+  notes:"5 минут, около 75 секунд на команду: T запуск, R сброс. Лидер читает прогноз и одну причину; три других лидера называют оценку фразой с чанком и одной реакцией. Студенты сидят, руки не поднимают. Полоска уходит в капсулу. В конце запечатайте её.",
+  html:function(){ return '<div class="view"><h2 class="h2">Capsule Court</h2>'+stepsHTML([
+      ["Each team chooses <b>one</b> prediction for 2050.","1"],
+      ["Leader reads it and gives <b>one reason</b>.","30 s"],
+      ["The other three leaders give a rating: “We think it’s … that …”","3 × 15 s"],
+      ["The strip goes into the capsule."]
+    ],"one")+'</div>'; }},
+ {id:"exit", type:"html", timer:120,
+  notes:"2 минуты. Заполняют низ листа Rating sheet и сдают его вместе с капсулой.",
+  html:function(){ return '<div class="view"><h2 class="h2">Exit ticket</h2>'+stepsHTML([
+      ["Talking to my team changed my rating in ___ rounds. Was it better or worse?"],
+      ["Which chunk will I use this week?"],
+      ["One sentence about my life in 2050, with that chunk."]
+    ],"one")+'</div>'; }},
+ {id:"end", type:"html", timer:0,
+  notes:"Запечатайте капсулу, подпишите «Open in 2030». Дата вскрытия задаётся в начале скрипта (OPEN_DATE).",
+  html:function(){ var d=Math.max(0,Math.ceil((OPEN_DATE-new Date())/86400000)); return '<div class="view center end"><p class="lead">The capsule opens in</p><div class="days">'+d.toLocaleString("en-US")+'</div><h2 class="h2">days · Open in '+OPEN_DATE.getFullYear()+'</h2></div>'; }}
+]);
+
+/* ---------- state ---------- */
+var cur = 0, stage = 0;
+var stageEl = document.getElementById("stage");
+var timerEl = document.getElementById("timer");
+var notesEl = document.getElementById("notes");
+var live = document.getElementById("live");
+var T = {def:0, left:0, end:0, run:false};
+var TEAMS = ["A","B","C","D"], SCORE = {A:0,B:0,C:0,D:0};
+try{ var saved = JSON.parse(localStorage.getItem("tc2050-score")||"null"); if(saved){ TEAMS.forEach(function(t){ SCORE[t] = +saved[t]||0; }); } }catch(e){}
+
+/* ---------- render ---------- */
+function cardHTML(c){
+  return '<div class="view"><div class="flip" id="flip">'+
+   '<div class="face front"><div class="meta"><span class="chip">'+c.tag+'</span><span class="chip theme">'+c.theme+'</span></div>'+
+     '<div class="chunk">'+gapify(c.chunk)+'</div><div class="gram">'+c.gram+'</div><div class="cue">How might it end? Think for 10 seconds. Space = flip</div></div>'+
+   '<div class="face back"><div class="meta"><span class="chip">'+c.tag+'</span><span class="chip theme">'+c.theme+'</span><span class="chip ghost">'+c.src+'</span></div>'+
+     '<p class="statement">'+c.text+'</p>'+
+     '<div class="q">'+c.q+' <small>Circle MY rating, then talk.</small></div>'+
+     scaleHTML(c.zone,false)+
+     '<div class="cols"><div><h4>Start with</h4><ul>'+c.start.map(function(s){return '<li>'+s+'</li>';}).join("")+'</ul></div>'+
+     '<div><h4>React</h4><ul>'+REACT.slice(0,3).map(function(s){return '<li>'+s+'</li>';}).join("")+'</ul></div></div>'+
+     '<div class="answer"><div class="verdict">'+c.verdict+(c.zone?'<small>zone '+(c.zone[0]===c.zone[1]?c.zone[0]:c.zone[0]+'–'+c.zone[1])+'</small>':'')+'</div><p>'+c.answer+'</p></div>'+
+   '</div></div></div>';
+}
+
+function render(){
+  var v = VIEWS[cur];
+  stageEl.innerHTML = v.type==="card" ? cardHTML(v.card) : v.html();
+  applyStage();
+  resetTimer();
+  buildDots();
+  if(!notesEl.hidden) showNotes();
+  try{ if(location.hash!=="#"+v.id) location.hash = v.id; }catch(e){}
+  live.textContent = v.type==="card" ? v.card.tag+" "+v.card.theme : v.id;
+}
+function applyStage(){
+  var f = document.getElementById("flip");
+  if(f){ f.classList.toggle("is-flipped", stage>=1); }
+  stageEl.classList.toggle("show-answer", stage>=2);
+}
+function buildDots(){
+  var box = document.getElementById("dots"); box.innerHTML = "";
+  VIEWS.forEach(function(v,i){
+    if(v.spare && !VIEWS[cur].spare) return;
+    var b = document.createElement("button");
+    b.className = "dot"+(i===cur?" on":(i<cur?" done":""));
+    b.setAttribute("aria-label", v.id);
+    b.addEventListener("click", function(e){ e.stopPropagation(); cur=i; stage=0; render(); });
+    box.appendChild(b);
+  });
+}
+
+/* ---------- navigation ---------- */
+function go(d, atEnd){
+  var i = cur;
+  do { i += d; } while(VIEWS[i] && VIEWS[i].spare && !VIEWS[cur].spare);
+  if(i<0 || i>=VIEWS.length) return;
+  cur = i;
+  stage = (VIEWS[i].type==="card" && atEnd) ? 2 : 0;
+  render();
+}
+function forward(){
+  if(VIEWS[cur].type==="card" && stage<2){ stage++; applyStage(); return; }
+  go(1,false);
+}
+function backward(){
+  if(VIEWS[cur].type==="card" && stage>0){ stage--; applyStage(); return; }
+  go(-1,true);
+}
+function jumpSpare(){
+  for(var i=0;i<VIEWS.length;i++){ if(VIEWS[i].spare){ cur=i; stage=0; render(); return; } }
+}
+
+/* ---------- timer ---------- */
+function fmt(ms){ var s=Math.ceil(ms/1000); var m=Math.floor(s/60); return m+":"+(s%60<10?"0":"")+(s%60); }
+function drawTimer(){
+  if(!T.def){ timerEl.hidden = true; return; }
+  timerEl.hidden = false;
+  timerEl.textContent = fmt(T.left);
+  timerEl.className = "timer"+(T.run?" run":"")+(T.def&&T.left<=10000&&T.left>0&&T.run?" low":"")+(T.left<=0?" done":"");
+}
+function resetTimer(){ T.def = VIEWS[cur].timer||0; T.left = T.def*1000; T.run = false; drawTimer(); }
+function toggleTimer(){
+  if(!T.def) return;
+  if(T.run){ T.left = Math.max(0, T.end-Date.now()); T.run = false; }
+  else { if(T.left<=0) T.left = T.def*1000; T.end = Date.now()+T.left; T.run = true; }
+  drawTimer();
+}
+setInterval(function(){
+  if(T.run){ T.left = Math.max(0, T.end-Date.now()); if(T.left===0) T.run=false; drawTimer(); }
+}, 200);
+
+/* ---------- score ---------- */
+function drawTeams(){
+  var box = document.getElementById("teams"); box.innerHTML = "";
+  TEAMS.forEach(function(t){
+    var el = document.createElement("div"); el.className = "team";
+    el.innerHTML = "Team "+t+" <b>"+SCORE[t]+"</b>";
+    el.addEventListener("click", function(e){ e.stopPropagation(); addScore(t,1); });
+    el.addEventListener("contextmenu", function(e){ e.preventDefault(); e.stopPropagation(); addScore(t,-1); });
+    box.appendChild(el);
+  });
+}
+function addScore(t,d){
+  SCORE[t] = Math.max(0, SCORE[t]+d);
+  try{ localStorage.setItem("tc2050-score", JSON.stringify(SCORE)); }catch(e){}
+  drawTeams();
+}
+
+/* ---------- notes ---------- */
+function showNotes(){ notesEl.innerHTML = "<small>Teacher notes</small>"+VIEWS[cur].notes; }
+function toggleNotes(){ notesEl.hidden = !notesEl.hidden; if(!notesEl.hidden) showNotes(); }
+
+/* ---------- events ---------- */
+document.addEventListener("keydown", function(e){
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  var k = e.key;
+  if(k===" " || k==="Enter" || k==="ArrowRight" || k==="PageDown" || k==="ArrowDown"){ e.preventDefault(); forward(); }
+  else if(k==="ArrowLeft" || k==="PageUp" || k==="Backspace" || k==="ArrowUp"){ e.preventDefault(); backward(); }
+  else if(k==="t" || k==="T"){ toggleTimer(); }
+  else if(k==="r" || k==="R"){ resetTimer(); }
+  else if(k==="n" || k==="N"){ toggleNotes(); }
+  else if(k==="s" || k==="S"){ jumpSpare(); }
+  else if(k==="f" || k==="F"){
+    try{
+      if(document.fullscreenElement){ document.exitFullscreen(); }
+      else { var p = document.documentElement.requestFullscreen(); if(p && p.catch) p.catch(function(){}); }
+    }catch(err){}
+  }
+  else if(/^Digit[1-4]$/.test(e.code)){ addScore(TEAMS[+e.code.slice(5)-1], e.shiftKey?-1:1); }
+  else if(e.code==="Home"){ cur=0; stage=0; render(); }
+});
+stageEl.addEventListener("click", forward);
+timerEl.addEventListener("click", function(e){ e.stopPropagation(); toggleTimer(); });
+document.getElementById("next").addEventListener("click", forward);
+document.getElementById("prev").addEventListener("click", backward);
+window.addEventListener("hashchange", function(){
+  var id = location.hash.replace("#","");
+  for(var i=0;i<VIEWS.length;i++){ if(VIEWS[i].id===id && i!==cur){ cur=i; stage=0; render(); return; } }
+});
+
+/* ---------- start ---------- */
+(function init(){
+  var id = ""; try{ id = location.hash.replace("#",""); }catch(e){}
+  for(var i=0;i<VIEWS.length;i++){ if(VIEWS[i].id===id){ cur=i; break; } }
+  drawTeams();
+  render();
+})();
+})();
+</script>
+</body>
+</html>
